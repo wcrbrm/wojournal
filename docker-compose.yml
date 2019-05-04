@@ -1,0 +1,23 @@
+version: '3'
+services:
+   db:
+      image: postgres:11-alpine
+      environment:
+         - POSTGRES_USER=postgres
+         - POSTGRES_PASSWORD=postgres
+      volumes:
+         - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+      restart: "always"
+   server:
+      build: ./
+      environment:
+         - PGSQL_DSN=postgresql://postgres:postgres@db:5432/postgres?sslmode=disable
+         - WEB_ROOT=/
+      restart: "always"
+      ports:
+         - 9091:9091
+   # client image - for integration testing
+   client:
+      image: wcrbrm/curljq
+      volumes:
+         - ./var/curl:/curl/output

@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+
+set -e
+if ! [ "`which docker`" ]; then (echo [`date`] ERROR: docker must be installed >&2) && exit 1; fi
+cd "$(dirname "$0")"
+
+out() { echo [`date`] $@; }
+start_all() { docker-compose up -d --build $@; docker-compose logs -f $@; }
+attach_shell() { docker-compose run --rm client bash; }
+stop() { out "Stopping"; docker-compose stop && docker-compose rm -f; }
+die() { echo "[`date`] ERROR: $@"; exit 1; }
+down() { if [ -z "$1" ]; then docker-compose down; else docker-compose kill $1; fi; }
+
+api_request() {
+  docker-compose run --rm client curl.sh $@; 
+}
+api_send() {
+  # sending transaction payload
+  echo "{\"note\": \"$1\"}" | api_request \
+    --jq='.id' --endpoint=send \
+    --url=http://server:9091/
+  # then we are trying to send some funds
+  export ID=$(cat ./var/output/send.out)
+  if [[ -z "$ID" ]]; then
+    cat ./var/output/send.out
+    die "Expected id in response"
+  fi
+}
+
+api_list_expect() {
+  local tag=$1
+  local nExpected=$2
+  # TODO: get list of notes from api, expect tags
+}
+
+apt_stats() {
+  # TODO: get daily stats 
+}
+
+[[ "$1" == "down" ]] && { down $2; exit 0; }
+[[ "$1" == "stop" ]] && { stop; exit 0; }
+[[ "$1" == "start" ]] && { start_all; exit 0; }
+[[ "$1" == "sh" ]] && { attach_shell; exit 0; }
+[[ "$1" == "ps" ]] && { docker-compose ps; exit 0; }
+[[ "$1" == "psql" ]] && { docker-compose exec db psql -Upostgres; exit 0; }
+
+[[ "$1" == "test" ]] && { 
+    start_all
+    
+    api_send 'one, #one'
+    api_send 'two, #one #two'
+    api_send 'three, #one #two #three'
+
+    api_list_expect "" 3
+    api_list_expect "one" 1
+    api_list_expect "two" 2
+    api_list_expect "three" 3
+	
+    apt_stats
+    exit 0; 
+}
+
+start_all $1
