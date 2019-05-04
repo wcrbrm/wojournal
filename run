@@ -18,7 +18,7 @@ api_send() {
   # sending transaction payload
   echo "{\"note\": \"$1\"}" | api_request \
     --jq='.id' --endpoint=send \
-    --url=http://server:9091/
+    --url=http://server:9091/api/
   # then we are trying to send some funds
   export ID=$(cat ./var/output/send.out)
   if [[ -z "$ID" ]]; then
@@ -46,6 +46,8 @@ apt_stats() {
 
 [[ "$1" == "test" ]] && { 
     start_all
+
+    # TODO: get main page
     
     api_send 'one, #one'
     api_send 'two, #one #two'

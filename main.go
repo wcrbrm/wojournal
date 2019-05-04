@@ -1,11 +1,11 @@
 package main
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/Depado/ginprom"
 	"github.com/gin-contrib/cors"
+	"github.com/gin-contrib/static"
 	"github.com/gin-gonic/gin"
 	cli "github.com/jawher/mow.cli"
 	log "github.com/sirupsen/logrus"
@@ -54,8 +54,11 @@ func runApp() {
 	config.AllowAllOrigins = true
 	r.Use(cors.New(config))
 
+	// share static files
+	r.Use(static.Serve("/", static.LocalFile("./web", false)))
+
 	// adding new records
-	r.POST("/", func(c *gin.Context) {
+	r.POST("/api/", func(c *gin.Context) {
 		body, errBody := c.GetRawData()
 		if errBody != nil {
 			log.WithField("error", errBody.Error()).Error("c.GetRawData")
@@ -67,16 +70,17 @@ func runApp() {
 		c.Data(200, "text/plain; charset=utf-8", []byte("OK\n"))
 	})
 
-	r.GET("/:tag", func(c *gin.Context) {
+	r.GET("/api/:tag", func(c *gin.Context) {
 		c.Data(200, "text/plain; charset=utf-8", []byte("TAG\n"))
 	})
-	r.GET("/day/:day", func(c *gin.Context) {
+	r.GET("/api/day/:day", func(c *gin.Context) {
 		c.Data(200, "text/plain; charset=utf-8", []byte("STATS\n"))
 	})
-	r.GET("/stats", func(c *gin.Context) {
+	r.GET("/api/stats", func(c *gin.Context) {
 		c.Data(200, "text/plain; charset=utf-8", []byte("STATS\n"))
 	})
-
-	fmt.Println("Server started. Almost")
+	r.NoRoute(func(c *gin.Context) {
+		c.JSON(404, gin.H{"code": "NOT_FOUND", "message": "API method not found"})
+	})
 	r.Run(*webListenAddr)
 }
